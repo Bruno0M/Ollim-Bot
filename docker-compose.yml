@@ -1,0 +1,10 @@
+version: '3.4'
+
+services:
+  ollim.bot:
+    image: ${DOCKER_REGISTRY-}ollimbot
+    build:
+      context: .
+      dockerfile: Ollim.Bot/Dockerfile
+    ports:
+    - 1111:8080
