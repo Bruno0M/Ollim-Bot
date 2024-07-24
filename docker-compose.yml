@@ -7,4 +7,6 @@ services:
       context: .
       dockerfile: Ollim.Bot/Dockerfile
     ports:
-    - 1111:8080
+        - 1111:1111
+    environment:
+        - ASPNETCORE_ENVIRONMENT=Production
