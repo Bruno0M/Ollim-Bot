@@ -1,5 +1,4 @@
 ﻿using Discord;
-using Discord.WebSocket;
 
 namespace Ollim.Bot.Services
 {
@@ -7,44 +6,59 @@ namespace Ollim.Bot.Services
     {
 
         private DateTime _targetDate;
+        private readonly ILogger<SendMessageService> _logger;
 
-        public SendMessageService()
+
+        public SendMessageService(ILogger<SendMessageService> logger)
         {
             _targetDate = new DateTime(2026, 6, 1);
+            _logger = logger;
         }
 
         public void ScheduleDailyMessage(ITextChannel textChannel)
         {
             TimeSpan timeToFirstRun = GetTimeToNextExecution();
 
-            Timer timer = new Timer(_ => SendDailyMessage(textChannel), null, timeToFirstRun, TimeSpan.FromSeconds(4));
+            Timer timer = new Timer(async _ => await SendDailyMessage(textChannel), null, timeToFirstRun, TimeSpan.FromDays(1));
         }
 
-        private async void SendDailyMessage(ITextChannel textChannel)
+        private async Task SendDailyMessage(ITextChannel textChannel)
         {
-            TimeSpan timeRemaining = _targetDate - DateTime.Now;
+            DateTime now = DateTime.Now;
+            TimeZoneInfo brazilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+
+            DateTime brazilTime = TimeZoneInfo.ConvertTime(now, brazilTimeZone);
+
+            TimeSpan timeRemaining = _targetDate - brazilTime;
+
 
             if (timeRemaining.TotalSeconds > 0)
             {
-                string message = $"Faltam {timeRemaining.Days} dias para {_targetDate:dd/MM/yyyy}!";
+                string message = $"Faltam {timeRemaining.Days} dias e {timeRemaining.Hours} horas para {_targetDate:dd/MM/yyyy}! ";
 
                 await textChannel.SendMessageAsync(message);
-            }
+                _logger.LogInformation($"Mensagem enviada!\n {message}");
 
+                //ScheduleDailyMessage(textChannel);
+            }
         }
 
         private TimeSpan GetTimeToNextExecution()
         {
-            // Define o horário de execução para as 7:00 AM do próximo dia
             DateTime now = DateTime.Now;
-            DateTime nextExecution = new DateTime(now.Year, now.Month, now.Day, 7, 0, 0, 0);
+            TimeZoneInfo brazilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
 
-            if (now > nextExecution)
+            DateTime brazilTime = TimeZoneInfo.ConvertTime(now, brazilTimeZone);
+
+            DateTime nextExecution = new DateTime(brazilTime.Year, brazilTime.Month, brazilTime.Day, 7, 0, 0, 0);
+
+            if (brazilTime > nextExecution)
             {
                 nextExecution = nextExecution.AddDays(1);
             }
 
-            return nextExecution - now;
+            _logger.Log(LogLevel.Information, $"Agendado para começar as: {nextExecution}");
+            return nextExecution - brazilTime;
         }
 
     }

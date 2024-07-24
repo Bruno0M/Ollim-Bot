@@ -2,9 +2,6 @@
 using Discord.Interactions;
 using Discord.Net;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Ollim.Bot.Services;
 using System.Reflection;
@@ -18,28 +15,42 @@ namespace Ollim.Bot.Configurations
         private readonly IServiceProvider _serviceProvider;
         private readonly IConfiguration _configuration;
 
-        public OllimBot(IServiceProvider serviceProvider, IConfiguration configuration)
+        private ISendMessageService _sendMessageService;
+
+
+        public OllimBot(IServiceProvider serviceProvider, IConfiguration configuration, ISendMessageService sendMessageService)
         {
             _serviceProvider = serviceProvider;
             _configuration = configuration;
 
             DiscordSocketConfig config = new()
             {
-                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildPresences | 
-                                 GatewayIntents.GuildVoiceStates | GatewayIntents.Guilds | 
-                                 GatewayIntents.GuildIntegrations | GatewayIntents.GuildMessages
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildVoiceStates | 
+                                 GatewayIntents.Guilds | GatewayIntents.GuildIntegrations
             };
 
             _client = new DiscordSocketClient(config);
             _interaction = new InteractionService(_client.Rest);
+            _sendMessageService = sendMessageService;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
 
             _client.Log += Log;
+            
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write("\ninfo: ");
+            Console.ResetColor();
 
-            string discordToken = _configuration.GetSection("Bot:DiscordToken").Value ?? throw new Exception("Missing Discord token");
+
+            DateTime serverTime = DateTime.Now;
+            TimeZoneInfo brazilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+
+            DateTime brazilTime = TimeZoneInfo.ConvertTime(serverTime, brazilTimeZone);
+            Console.WriteLine($"OllimBot está iniciando em {brazilTime}\n");
+
+            string discordToken = _configuration["Bot:DiscordToken"];
 
             await _client.LoginAsync(TokenType.Bot, discordToken);
             await _client.StartAsync();
@@ -52,7 +63,7 @@ namespace Ollim.Bot.Configurations
             var voiceHandler = _serviceProvider.GetRequiredService<VoiceHandler>();
             _client.UserVoiceStateUpdated += voiceHandler.UserVoiceStateUpdatedHandler;
 
-            await Task.Delay(-1);
+            //await Task.Delay(-1);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
@@ -63,6 +74,7 @@ namespace Ollim.Bot.Configurations
         private Task Log(LogMessage msg)
         {
             Console.WriteLine(msg);
+
             return Task.CompletedTask;
         }
 
@@ -77,6 +89,11 @@ namespace Ollim.Bot.Configurations
             {
                 await _interaction.RegisterCommandsGloballyAsync();
 
+                SocketGuild guild = _client.GetGuild(1256038183154614282);
+                ITextChannel? channel = guild.GetChannel(1256038183154614287) as ITextChannel;
+                if (channel == null) return;
+
+                _sendMessageService.ScheduleDailyMessage(channel);
             }
             catch (HttpException exception)
             {
