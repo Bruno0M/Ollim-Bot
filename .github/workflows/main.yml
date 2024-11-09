@@ -29,4 +29,4 @@ jobs:
           context: Ollim.Bot
           file: Ollim.Bot/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USER }}/bruno0m:latest, ${{ secrets.DOCKERHUB_USER }}/bruno0m:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USER }}/ollim-bot:latest, ${{ secrets.DOCKERHUB_USER }}/ollim-bot:${{ github.sha }}
