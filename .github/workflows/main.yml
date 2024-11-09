@@ -1,0 +1,32 @@
+name: Build Back-end
+
+on:
+  workflow_dispatch:
+      inputs:
+        refToBuild:
+          description: 'Branch, tag or commit SHA1 to build'
+          required: true
+          type: string
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{secrets.DOCKERHUB_USER}}
+          password: ${{secrets.DOCKERHUB_PWD}}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6.9.0
+        with:
+          context: Ollim.Bot
+          file: Ollim.Bot/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USER }}/bruno0m:latest, ${{ secrets.DOCKERHUB_USER }}/bruno0m:${{ github.sha }}
