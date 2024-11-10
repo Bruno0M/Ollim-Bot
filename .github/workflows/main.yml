@@ -26,7 +26,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.9.0
         with:
-          context: Ollim.Bot
+          context: .
           file: Ollim.Bot/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USER }}/ollim-bot:latest, ${{ secrets.DOCKERHUB_USER }}/ollim-bot:${{ github.sha }}
