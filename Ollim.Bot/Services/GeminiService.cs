@@ -24,7 +24,7 @@ namespace Ollim.Bot.Services
         public async Task<string> GenerateContent(string prompt, string fileUri = null, string filePath = null)
         {
             HttpClient client = new HttpClient();
-            var apiUrl = $"{_baseUrl}/v1beta/models/gemini-1.5-flash:generateContent?key={_apiKey}";
+            var apiUrl = $"{_baseUrl}/v1beta/models/gemini-1.5-flash-latest:generateContent?key={_apiKey}";
 
             var parts = new List<object>
             {
