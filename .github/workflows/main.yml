@@ -22,6 +22,14 @@ jobs:
         with:
           username: ${{secrets.DOCKERHUB_USER}}
           password: ${{secrets.DOCKERHUB_PWD}}
+
+      - name: App Settings Variable Substitution
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: Ollim.Bot/appsettings.json
+        env:
+          Bot.DiscordToken: ${{ secrets.DISCORD_TOKEN }}
+          Bot.GeminiToken: ${{ secrets.GEMINI_TOKEN }}
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.9.0
