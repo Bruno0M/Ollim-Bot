@@ -7,10 +7,12 @@ namespace Ollim.Bot.Commands.Modules
     public class PingCommandHandler : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly DiscordSocketClient _client;
+        private readonly ILogger<PingCommandHandler> _logger;
 
-        public PingCommandHandler(DiscordSocketClient client)
+        public PingCommandHandler(DiscordSocketClient client, ILogger<PingCommandHandler> logger)
         {
             _client = client;
+            _logger = logger;
         }
 
         [SlashCommand("ping", "Check OllimBot current latency.")]
@@ -36,6 +38,8 @@ namespace Ollim.Bot.Commands.Modules
                 .WithDescription(description)
                 .WithTimestamp(uptime)
                 .Build();
+
+            _logger.LogInformation($"{Context.User.GlobalName} pingou - {latency}");
 
             await RespondAsync(embed: embedBuilder);
         }
