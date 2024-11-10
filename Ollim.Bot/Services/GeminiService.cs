@@ -8,15 +8,17 @@ namespace Ollim.Bot.Services
 {
     public class GeminiService
     {
-        private string _apiKey = "AIzaSyCxAppyEo0m6eofnO5y8ecAc8pCK0_0kO0";
+        private readonly IConfiguration _configuration;
+        private string _apiKey;
         private string _baseUrl = "https://generativelanguage.googleapis.com";
 
         public GeminiService()
         {
         }
-        public GeminiService(string apiKey)
+        public GeminiService(IConfiguration configuration)
         {
-            _apiKey = apiKey;
+            _configuration = configuration;
+            _apiKey = _configuration["Bot:GeminiToken"] ?? throw new ArgumentNullException(nameof(_apiKey), "Gemini Api Token not found");
         }
 
         public async Task<string> GenerateContent(string prompt, string fileUri = null, string filePath = null)

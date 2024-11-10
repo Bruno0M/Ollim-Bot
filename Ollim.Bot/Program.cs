@@ -46,6 +46,7 @@ await Host.CreateDefaultBuilder(args)
 
 
         services.AddScoped<IImageProfileProcessingService, ImageProfileProcessingService>();
+        services.AddScoped<GeminiService>();
 
         services.AddHostedService<OllimBot>();
 
