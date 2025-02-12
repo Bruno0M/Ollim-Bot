@@ -6,16 +6,19 @@ namespace Ollim.Bot.Commands.Modules
 {
     public class TestGeminiCommandHandler : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly GeminiService _geminiService;
+        private readonly IServiceProvider _serviceProvider;
 
-        public TestGeminiCommandHandler(GeminiService geminiService)
+        public TestGeminiCommandHandler(IServiceProvider serviceProvider)
         {
-            _geminiService = geminiService;
+            _serviceProvider = serviceProvider;
         }
 
         [SlashCommand("gemininho", "testano essa tal de AI")]
         public async Task Gemininho(string prompt, Attachment attachment = null)
         {
+            using var scope = _serviceProvider.CreateScope();
+            var _geminiService = scope.ServiceProvider.GetRequiredService<GeminiService>();
+
             await DeferAsync();
 
             var generateContent = "";

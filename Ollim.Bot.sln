@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ollim.Infrastructure", "Oll
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{303CD700-BA7D-44B7-8AF3-18EB5237C5DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ollim.Domain", "..\Ollim.Domain\Ollim.Domain.csproj", "{26ABE9F7-47BC-4F62-A545-04DB7F853C2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{303CD700-BA7D-44B7-8AF3-18EB5237C5DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{303CD700-BA7D-44B7-8AF3-18EB5237C5DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{303CD700-BA7D-44B7-8AF3-18EB5237C5DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26ABE9F7-47BC-4F62-A545-04DB7F853C2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26ABE9F7-47BC-4F62-A545-04DB7F853C2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26ABE9F7-47BC-4F62-A545-04DB7F853C2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26ABE9F7-47BC-4F62-A545-04DB7F853C2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

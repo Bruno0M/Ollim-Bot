@@ -1,16 +1,16 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Ollim.Infrastructure.Data;
+using Ollim.Domain.Repositories;
 
 namespace Ollim.Bot.Commands.Modules
 {
     public class SetTextChannelCommandHandler : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly AppDbContext _context;
+        private readonly IServiceProvider _serviceProvider;
 
-        public SetTextChannelCommandHandler(AppDbContext context)
+        public SetTextChannelCommandHandler(IServiceProvider serviceProvider)
         {
-            _context = context;
+            _serviceProvider = serviceProvider;
         }
 
         [SlashCommand("set_channel", "Select the channel to send notifications to")]
@@ -18,11 +18,20 @@ namespace Ollim.Bot.Commands.Modules
 
         public async Task SetTextChannelAsync(ITextChannel channel)
         {
+            using var scope = _serviceProvider.CreateScope();
+            var _channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
+
             var guild = Context.Guild;
 
-            _context.SetNotificationChannel(guild.Id, channel.Id);
+            var channelInGuild = await _channelRepository.GetNotification(guild.Id);
+            Console.WriteLine("request: " + channel.Id + " " + "inGuild: " + channelInGuild.Id);
+            if (channelInGuild.Id != channel.Id)
+            {
+                _channelRepository.SetNotification(guild.Id, channel.Id);
+                await RespondAsync($"Canal de texto configurado para: {channel.Name}");
+            }
 
-            await RespondAsync($"Canal de texto configurado para: {channel.Name}");
+            await RespondAsync($"Esse canal já está configurado");
         }
     }
 }

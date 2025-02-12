@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Ollim.Domain.Repositories;
 
 namespace Ollim.Bot.Services
 {
@@ -7,24 +8,22 @@ namespace Ollim.Bot.Services
     {
         private DateTime _targetDate;
         private readonly ILogger<SendMessageService> _logger;
-        private ITextChannel _textChannel;
+        private DiscordSocketClient _client;
+        private readonly IServiceProvider _serviceProvider;
 
-        public SendMessageService(ILogger<SendMessageService> logger)
+        public SendMessageService(ILogger<SendMessageService> logger, DiscordSocketClient client, IServiceProvider serviceProvider)
         {
             _targetDate = new DateTime(2026, 6, 1);
             _logger = logger;
-        }
-
-        public void SetTextChannel(ITextChannel textChannel)
-        {
-            _textChannel = textChannel;
+            _client = client;
+            _serviceProvider = serviceProvider;
         }
 
         public async Task ScheduleMessage(CancellationToken stoppingToken)
         {
             var brazilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
             var brazilTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, brazilTimeZone);
-            var scheduledTime = new TimeSpan(7, 0, 0);
+            var scheduledTime = new TimeSpan(16, 41, 0);
 
             var nextRun = brazilTime.Date.Add(scheduledTime);
             if (brazilTime.TimeOfDay >= scheduledTime)
@@ -46,11 +45,12 @@ namespace Ollim.Bot.Services
             }
             catch (TaskCanceledException)
             {
+                return;
             }
 
-            if (!stoppingToken.IsCancellationRequested && _textChannel != null)
+            if (!stoppingToken.IsCancellationRequested)
             {
-                await SendDailyMessageAsync(_textChannel);
+                await SendMessagesToAllChannelsAsync();
             }
         }
 
@@ -85,5 +85,32 @@ namespace Ollim.Bot.Services
                 _logger.LogError(ex, "Erro ao enviar a mensagem diária.");
             }
         }
+
+        private async Task SendMessagesToAllChannelsAsync()
+        {
+            using var scoped = _serviceProvider.CreateScope();
+            var _channelRepository = scoped.ServiceProvider.GetRequiredService<IChannelRepository>();
+
+            var channels = await _channelRepository.GetAllNotification();
+
+            foreach (var channel in channels)
+            {
+                //var guild = _client.GetGuild(channel.GuildId);
+                var guild = _client.GetGuild(channel.GuildId);
+                if (guild != null)
+                {
+                    var textChannel = guild.GetTextChannel(channel.Id);
+                    if (textChannel != null)
+                    {
+                        await SendDailyMessageAsync(textChannel);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning($"Canal com ID {channel.Id} não encontrado no guild {channel.GuildId}.");
+                }
+            }
+        }
+
     }
 }

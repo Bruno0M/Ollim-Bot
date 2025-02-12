@@ -5,15 +5,18 @@ using Discord.Interactions;
 using Ollim.Infrastructure.Data;
 using Ollim.Infrastructure.Interfaces;
 using Ollim.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
+using Ollim.Domain.Repositories;
+using Ollim.Infrastructure.Repositories;
 
-await Host.CreateDefaultBuilder(args)
+await Host.CreateDefaultBuilder()
     .ConfigureWebHost(
     webhost => webhost
     .UseKestrel(kestrelOptions =>
     {
         kestrelOptions.ListenAnyIP(1111);
     })
-    .Configure(app =>
+    .Configure((app) =>
     {
         app.UseCors(x => x
         .AllowAnyOrigin()
@@ -25,13 +28,14 @@ await Host.CreateDefaultBuilder(args)
             await context.Response.WriteAsync("Hello World!");
         });
     }))
-    .ConfigureAppConfiguration(config =>
+    .ConfigureAppConfiguration((hostContext, config) =>
     {
-        config.AddJsonFile("appsettings.json", false)
-        .AddJsonFile("appsettings.Development.json", true)
-        .AddJsonFile("appsettings.Production.json", optional: true, reloadOnChange: true);
+        var env = hostContext.HostingEnvironment;
+        Console.WriteLine($"Current environment: {env.EnvironmentName}");
 
-
+        config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+              .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
+              .AddEnvironmentVariables();
 
     })
     .ConfigureServices((context, services) =>
@@ -39,16 +43,25 @@ await Host.CreateDefaultBuilder(args)
         services.AddSingleton<DiscordSocketClient>();
         services.AddSingleton<DiscordSocketConfig>();
         services.AddSingleton<VoiceHandler>();
-        services.AddSingleton<InteractionService>();
-        services.AddSingleton<AppDbContext>();
+        services.AddSingleton(serviceProvider =>
+        {
+            var client = serviceProvider.GetRequiredService<DiscordSocketClient>();
+            return new InteractionService(client.Rest);
+        });
         services.AddSingleton<ISendMessageService, SendMessageService>();
         services.AddHostedService<OllimBackgroundServices>();
 
 
-        services.AddScoped<IImageProfileProcessingService, ImageProfileProcessingService>();
+        services.AddSingleton<IImageProfileProcessingService, ImageProfileProcessingService>();
         services.AddScoped<GeminiService>();
+        services.AddScoped<IChannelRepository, ChannelRepository>();
 
         services.AddHostedService<OllimBot>();
+
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseNpgsql(context.Configuration.GetConnectionString("DefaultConnection"));
+        });
 
 
         services.AddCors(options =>
@@ -56,7 +69,7 @@ await Host.CreateDefaultBuilder(args)
             options.AddPolicy("AllowAll", builder =>
             {
                 builder
-                    .AllowAnyOrigin() // Replace with specific allowed origins if needed
+                    .AllowAnyOrigin()
                     .AllowAnyMethod()
                     .AllowAnyHeader();
             });

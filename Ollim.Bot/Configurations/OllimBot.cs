@@ -3,7 +3,6 @@ using Discord.Interactions;
 using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
-using Ollim.Bot.Services;
 using System.Reflection;
 
 namespace Ollim.Bot.Configurations
@@ -15,10 +14,8 @@ namespace Ollim.Bot.Configurations
         private readonly IServiceProvider _serviceProvider;
         private readonly IConfiguration _configuration;
 
-        private ISendMessageService _sendMessageService;
 
-
-        public OllimBot(IServiceProvider serviceProvider, IConfiguration configuration, ISendMessageService sendMessageService)
+        public OllimBot(IServiceProvider serviceProvider, IConfiguration configuration)
         {
             _serviceProvider = serviceProvider;
             _configuration = configuration;
@@ -31,7 +28,6 @@ namespace Ollim.Bot.Configurations
 
             _client = new DiscordSocketClient(config);
             _interaction = new InteractionService(_client.Rest);
-            _sendMessageService = sendMessageService;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -132,12 +128,6 @@ namespace Ollim.Bot.Configurations
             try
             {
                 await _interaction.RegisterCommandsGloballyAsync();
-
-                SocketGuild guild = _client.GetGuild(1256038183154614282);
-                ITextChannel? channel = guild.GetChannel(1256038183154614287) as ITextChannel;
-                if (channel == null) return;
-
-                (_sendMessageService as SendMessageService)?.SetTextChannel(channel);
             }
             catch (HttpException exception)
             {

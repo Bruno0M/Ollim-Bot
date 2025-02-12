@@ -1,22 +1,26 @@
-﻿namespace Ollim.Infrastructure.Data
+﻿using Microsoft.EntityFrameworkCore;
+using Ollim.Bot.Entities;
+
+namespace Ollim.Infrastructure.Data
 {
-    public class AppDbContext
+    public class AppDbContext : DbContext
     {
-        public Dictionary<ulong, ulong> Configuration { get; set; }
-
-        public AppDbContext()
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
-            Configuration = new Dictionary<ulong, ulong>();
         }
 
-        public void SetNotificationChannel(ulong guildId, ulong channelId)
-        {
-            Configuration[guildId] = channelId;
-        }
+        public DbSet<Channel> Channels { get; set; }
 
-        public ulong? GetNotificationChannel(ulong guildId)
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            return Configuration.ContainsKey(guildId) ? Configuration[guildId] : (ulong?)null;
+            builder.Entity<Channel>(entity =>
+            {
+                entity.ToTable("channels", "notfications");
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.GuildId).HasColumnName("guild_id");
+            });
+
+            base.OnModelCreating(builder);
         }
     }
 }
