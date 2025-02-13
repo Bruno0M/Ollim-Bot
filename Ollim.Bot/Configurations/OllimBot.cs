@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
+using Ollim.Domain.Repositories;
 using System.Reflection;
 
 namespace Ollim.Bot.Configurations
@@ -61,6 +62,8 @@ namespace Ollim.Bot.Configurations
             var voiceHandler = _serviceProvider.GetRequiredService<VoiceHandler>();
             _client.UserVoiceStateUpdated += voiceHandler.UserVoiceStateUpdatedHandler;
 
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+
             //await Task.Delay(-1);
         }
 
@@ -76,50 +79,66 @@ namespace Ollim.Bot.Configurations
             return Task.CompletedTask;
         }
 
-        private Task TestGetGuild(ulong guild)
+        private async void OnProcessExit(object sender, EventArgs e)
         {
-            return Task.CompletedTask;
+            using var scope = _serviceProvider.CreateScope();
+            var _channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
+
+            var channels = await _channelRepository.GetAllNotification();
+
+            foreach (var channel in channels)
+            {
+                var messageChannel = await _client.GetChannelAsync(channel.Id) as IMessageChannel;
+
+                if (messageChannel != null)
+                {
+                    await messageChannel.SendMessageAsync("Ollim está desligando...");
+                }
+            }
+
+            await _client.StopAsync();
+            await _client.LogoutAsync();
         }
 
         private Task MessageReceivedHandler(SocketMessage stMessage)
         {
-                Task.Run(async () =>
+            Task.Run(async () =>
+        {
+
+            SocketUserMessage msg = stMessage as SocketUserMessage;
+            if (msg == null) return;
+
+
+            if (stMessage.Author.IsBot) return;
+
+            var userMessage = msg.Content;
+
+            string botMessage = string.Empty;
+
+            List<string> messages = new List<string>()
             {
-
-                SocketUserMessage msg = stMessage as SocketUserMessage;
-                if (msg == null) return;
-
-
-                if (stMessage.Author.IsBot) return;
-
-                var userMessage = msg.Content;
-
-                string botMessage = string.Empty;
-
-                List<string> messages = new List<string>()
-                {
                     "dia",
                     "tarde",
                     "noite"
-                };
+            };
 
 
-                foreach (var message in messages)
+            foreach (var message in messages)
+            {
+                if (userMessage.Contains($"Bom {message}", StringComparison.OrdinalIgnoreCase) && userMessage.Contains("Bot", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (userMessage.Contains($"Bom {message}", StringComparison.OrdinalIgnoreCase) && userMessage.Contains("Bot", StringComparison.OrdinalIgnoreCase))
-                    {
-                        botMessage = $"Bom {message}, {stMessage.Author.Username}!";
-                        break;
-                    }
+                    botMessage = $"Bom {message}, {stMessage.Author.Username}!";
+                    break;
                 }
+            }
 
-                var msgChannel = stMessage.Channel as IMessageChannel;
+            var msgChannel = stMessage.Channel as IMessageChannel;
 
-                //if (!string.IsNullOrEmpty(botMessage))
-                //{
-                await msgChannel.SendMessageAsync(botMessage);
-                //}
-            });
+            //if (!string.IsNullOrEmpty(botMessage))
+            //{
+            await msgChannel.SendMessageAsync(botMessage);
+            //}
+        });
             return Task.CompletedTask;
         }
 
