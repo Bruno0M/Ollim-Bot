@@ -62,34 +62,18 @@ namespace Ollim.Bot.Configurations
             var voiceHandler = _serviceProvider.GetRequiredService<VoiceHandler>();
             _client.UserVoiceStateUpdated += voiceHandler.UserVoiceStateUpdatedHandler;
 
-            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-
             //await Task.Delay(-1);
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            return _client.LogoutAsync();
-        }
-
-        private Task Log(LogMessage msg)
-        {
-            Console.WriteLine(msg);
-
-            return Task.CompletedTask;
-        }
-
-        private async void OnProcessExit(object sender, EventArgs e)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             using var scope = _serviceProvider.CreateScope();
-            var _channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
+            var channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
 
-            var channels = await _channelRepository.GetAllNotification();
-
+            var channels = await channelRepository.GetAllNotification();
             foreach (var channel in channels)
             {
                 var messageChannel = await _client.GetChannelAsync(channel.Id) as IMessageChannel;
-
                 if (messageChannel != null)
                 {
                     await messageChannel.SendMessageAsync("Ollim está desligando...");
@@ -98,6 +82,13 @@ namespace Ollim.Bot.Configurations
 
             await _client.StopAsync();
             await _client.LogoutAsync();
+        }
+
+        private Task Log(LogMessage msg)
+        {
+            Console.WriteLine(msg);
+
+            return Task.CompletedTask;
         }
 
         private Task MessageReceivedHandler(SocketMessage stMessage)
