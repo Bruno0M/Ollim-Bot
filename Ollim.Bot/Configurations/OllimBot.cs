@@ -23,8 +23,8 @@ namespace Ollim.Bot.Configurations
 
             DiscordSocketConfig config = new()
             {
-                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildVoiceStates |
-                                 GatewayIntents.Guilds | GatewayIntents.GuildIntegrations | GatewayIntents.MessageContent
+                GatewayIntents = GatewayIntents.GuildVoiceStates | GatewayIntents.MessageContent
+                                | GatewayIntents.Guilds | GatewayIntents.GuildIntegrations
             };
 
             _client = new DiscordSocketClient(config);

@@ -1,4 +1,5 @@
 ﻿using ImageMagick;
+using ImageMagick.Drawing;
 using Ollim.Infrastructure.Interfaces;
 
 namespace Ollim.Infrastructure.Services
