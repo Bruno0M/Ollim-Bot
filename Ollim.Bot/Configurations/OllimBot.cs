@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
+using Ollim.Bot.Configurations.Handlers;
 using Ollim.Domain.Repositories;
 using System.Reflection;
 
@@ -14,27 +15,37 @@ namespace Ollim.Bot.Configurations
         private readonly InteractionService _interaction;
         private readonly IServiceProvider _serviceProvider;
         private readonly IConfiguration _configuration;
+        private readonly DiscordExceptionHandler _exceptionHandler;
+        private readonly ILogger<OllimBot> _logger;
 
-
-        public OllimBot(IServiceProvider serviceProvider, IConfiguration configuration)
+        public static DiscordSocketClient CreateDiscordClient()
         {
-            _serviceProvider = serviceProvider;
-            _configuration = configuration;
-
-            DiscordSocketConfig config = new()
+            var config = new DiscordSocketConfig
             {
-                GatewayIntents = GatewayIntents.GuildVoiceStates | GatewayIntents.MessageContent
-                                | GatewayIntents.Guilds | GatewayIntents.GuildIntegrations
+                GatewayIntents = GatewayIntents.GuildVoiceStates |
+                                 GatewayIntents.MessageContent |
+                                 GatewayIntents.Guilds |
+                                 GatewayIntents.GuildIntegrations
             };
 
-            _client = new DiscordSocketClient(config);
+            return new DiscordSocketClient(config);
+        }
+
+
+        public OllimBot(DiscordSocketClient client, IServiceProvider serviceProvider, IConfiguration configuration, DiscordExceptionHandler exceptionHandler)
+        {
+            _client = client;
+            _serviceProvider = serviceProvider;
+            _configuration = configuration;
             _interaction = new InteractionService(_client.Rest);
+            _exceptionHandler = exceptionHandler;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
 
             _client.Log += Log;
+            _exceptionHandler.Initialize();
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write("\ninfo: ");
@@ -53,6 +64,17 @@ namespace Ollim.Bot.Configurations
             await _client.StartAsync();
 
             await _interaction.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
+
+            _interaction.SlashCommandExecuted += async (commandInfo, context, result) =>
+            {
+                if (!result.IsSuccess)
+                {
+                    if (result is ExecuteResult execResult && execResult.Exception is not null)
+                    {
+                        await _exceptionHandler.SendExceptionMessageAsync(execResult.Exception, context.Guild?.Id);
+                    }
+                }
+            };
 
             _client.Ready += HandleReadyAsync;
             _client.InteractionCreated += InteractionCreatedAsync;
@@ -148,8 +170,40 @@ namespace Ollim.Bot.Configurations
 
         private async Task InteractionCreatedAsync(SocketInteraction interaction)
         {
-            var context = new SocketInteractionContext(_client, interaction);
-            await _interaction.ExecuteCommandAsync(context, _serviceProvider);
+            try
+            {
+                var context = new SocketInteractionContext(_client, interaction);
+                await _interaction.ExecuteCommandAsync(context, _serviceProvider);
+            }
+            catch (Exception exception)
+            {
+                // Primeiro responda à interação
+                if (!interaction.HasResponded)
+                {
+                    try
+                    {
+                        await interaction.RespondAsync("Ocorreu um erro ao processar o comando.", ephemeral: true);
+                    }
+                    catch
+                    {
+                        // Se falhar ao responder, tente modificar a resposta
+                        try
+                        {
+                            await interaction.ModifyOriginalResponseAsync(props =>
+                                props.Content = "Ocorreu um erro ao processar o comando.");
+                        }
+                        catch
+                        {
+                            // Se ambos falharem, apenas log
+                            _logger.LogError("Não foi possível responder à interação");
+                        }
+                    }
+                }
+
+                // Depois envie a mensagem de erro detalhada
+                ulong? guildId = interaction.GuildId;
+                await _exceptionHandler.SendExceptionMessageAsync(exception, guildId);
+            }
         }
 
     }

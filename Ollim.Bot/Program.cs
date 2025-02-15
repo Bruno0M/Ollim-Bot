@@ -8,6 +8,7 @@ using Ollim.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Ollim.Domain.Repositories;
 using Ollim.Infrastructure.Repositories;
+using Ollim.Bot.Configurations.Handlers;
 
 await Host.CreateDefaultBuilder()
     .ConfigureWebHost(
@@ -40,15 +41,18 @@ await Host.CreateDefaultBuilder()
     })
     .ConfigureServices((context, services) =>
     {
-        services.AddSingleton<DiscordSocketClient>();
-        services.AddSingleton<DiscordSocketConfig>();
-        services.AddSingleton<VoiceHandler>();
+        services.AddSingleton<DiscordSocketClient>(provider => OllimBot.CreateDiscordClient());
+
         services.AddSingleton(serviceProvider =>
         {
             var client = serviceProvider.GetRequiredService<DiscordSocketClient>();
             return new InteractionService(client.Rest);
         });
+
+        services.AddSingleton<DiscordSocketConfig>();
+        services.AddSingleton<VoiceHandler>();
         services.AddSingleton<ISendMessageService, SendMessageService>();
+        services.AddSingleton<DiscordExceptionHandler>();
         services.AddHostedService<OllimBackgroundServices>();
 
 
