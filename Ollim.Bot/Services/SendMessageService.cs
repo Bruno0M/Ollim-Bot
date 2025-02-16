@@ -23,7 +23,7 @@ namespace Ollim.Bot.Services
         {
             var brazilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
             var brazilTime = TimeZoneInfo.ConvertTime(DateTime.UtcNow, brazilTimeZone);
-            var scheduledTime = new TimeSpan(16, 41, 0);
+            var scheduledTime = new TimeSpan(7, 0, 0);
 
             var nextRun = brazilTime.Date.Add(scheduledTime);
             if (brazilTime.TimeOfDay >= scheduledTime)
