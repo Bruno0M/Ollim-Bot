@@ -21,6 +21,58 @@ namespace Ollim.Bot.Configurations.Handlers
         {
             AppDomain.CurrentDomain.UnhandledException += HandleUnhandledException;
             _client.Log += LogAsync;
+            _client.Disconnected += HandleDisconnectionAsync;
+        }
+
+        private int _reconnectAttempts = 0;
+        private const int MaxReconnectAttempts = 5;
+        private const int InitialReconnectDelay = 5;
+
+        private async Task HandleDisconnectionAsync(Exception exception)
+        {
+            _logger.LogError($"Bot foi desconectado: {exception.Message}");
+            await SendExceptionMessageAsync(exception);
+            
+            while (_reconnectAttempts < MaxReconnectAttempts)
+            {
+                try
+                {
+                    int delaySeconds = InitialReconnectDelay * (int)Math.Pow(2, _reconnectAttempts);
+                    _logger.LogInformation($"Tentativa de reconexão {_reconnectAttempts + 1}/{MaxReconnectAttempts} em {delaySeconds} segundos");
+                    
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                    
+                    if (_client.ConnectionState != ConnectionState.Connected)
+                    {
+                        await _client.StopAsync();
+                        await Task.Delay(1000);
+                        await _client.StartAsync();
+                        
+                        for (int i = 0; i < 10; i++)
+                        {
+                            if (_client.ConnectionState == ConnectionState.Connected)
+                            {
+                                _logger.LogInformation("Reconexão bem-sucedida!");
+                                _reconnectAttempts = 0;
+                                return;
+                            }
+                            await Task.Delay(1000);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Tentativa de reconexão {_reconnectAttempts + 1} falhou: {ex.Message}");
+                }
+                
+                _reconnectAttempts++;
+            }
+
+            if (_reconnectAttempts >= MaxReconnectAttempts)
+            {
+                _logger.LogCritical($"Falha após {MaxReconnectAttempts} tentativas de reconexão. O bot precisará ser reiniciado manualmente.");
+                _reconnectAttempts = 0; // Reset para futuras tentativas
+            }
         }
 
         private async Task LogAsync(LogMessage log)
